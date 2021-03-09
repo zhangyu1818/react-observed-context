@@ -1,25 +1,22 @@
 import * as React from 'react'
 
-export type ContextHook<HookReturn, State = any> = (initialState?: State) => HookReturn
+export type ObservedKeys<State> = keyof State | (keyof State)[] | false
 
-export type ProviderProps<State = any> = {
-  initialState?: State
-}
-
-export type ObservedKeys<State = any> = keyof State | (keyof State)[] | false
+export type InternalHookReturn<State> = [State, React.Dispatch<React.SetStateAction<State>>]
 
 const MAX_SIGNED_31_BIT_INT = 1073741823
 const bitsArray = Array(31)
   .fill(0)
   .map((_value, index) => Math.pow(2, index))
 
-export default function createObservedContext<HookReturn, State = any>(
-  useHook: ContextHook<HookReturn, State>,
-  stateKey: string
-) {
+function useInternalHook<State>(initialState: State) {
+  return React.useState(initialState)
+}
+
+export default function createObservedContext<State>(initialState: State) {
   let keyBitsMap: { [key: string]: number } = {}
 
-  function calculateKeys(keys?: ObservedKeys): number | false | undefined {
+  function calculateKeys(keys?: ObservedKeys<State>): number | false | undefined {
     let result = 0
     const calculate = (key) => {
       if (key in keyBitsMap) {
@@ -42,8 +39,8 @@ export default function createObservedContext<HookReturn, State = any>(
   function calculateChangedBits(oldValue: State, newValue: State): number {
     try {
       let result = 0
-      Object.keys(newValue[stateKey]).forEach((key) => {
-        if (oldValue[stateKey][key] !== newValue[stateKey][key]) {
+      Object.keys(newValue[0]).forEach((key) => {
+        if (oldValue[0][key] !== newValue[0][key]) {
           result |= keyBitsMap[key]
         }
       })
@@ -53,26 +50,31 @@ export default function createObservedContext<HookReturn, State = any>(
     }
   }
 
-  // @ts-ignore
-  const InternalContext = React.createContext<HookReturn>({} as HookReturn, calculateChangedBits)
+  const InternalContext = React.createContext<InternalHookReturn<State>>(
+    [],
+    // @ts-ignore
+    calculateChangedBits
+  )
 
-  const Provider: React.FC<ProviderProps<State>> = ({ children, initialState }) => {
-    const state = useHook(initialState)
-    const initial = state[stateKey]
-    if (typeof initial === 'object' && initial !== null) {
+  const Provider: React.FC = ({ children }) => {
+    const [state, setState] = useInternalHook(initialState)
+    if (typeof state === 'object' && state !== null) {
       keyBitsMap = {}
-      Object.keys(initial).forEach((key, index) => {
+      Object.keys(state).forEach((key, index) => {
         keyBitsMap[key] = bitsArray[index]
       })
     }
 
-    return <InternalContext.Provider value={state}>{children}</InternalContext.Provider>
+    return <InternalContext.Provider value={[state, setState]}>{children}</InternalContext.Provider>
   }
 
-  const useObservedState = (key?: ObservedKeys<State>): HookReturn => {
+  const useObservedState = (key?: ObservedKeys<State>) => {
     const observedBits = calculateKeys(key)
-    // @ts-ignore
-    return React.useContext(InternalContext, observedBits)
+    return React.useContext<InternalHookReturn<State>>(
+      InternalContext,
+      // @ts-ignore
+      observedBits
+    )
   }
 
   return {

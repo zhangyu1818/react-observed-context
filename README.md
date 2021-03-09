@@ -11,20 +11,15 @@ yarn add react-observed-context
 ## 示例
 
 ```jsx
-import { useState } from "react";
 import { render } from "react-dom";
 
 import createObservedContext from "react-observed-context";
 
-const useFormState = () => {
-  const [state, setState] = useState({ user: "", password: "" });
-  return { state, setState };
-};
 
-const Context = createObservedContext(useFormState, "state");
+const Context = createObservedContext({ user: "", password: "" });
 
 const Input = ({ name }) => {
-  const { state, setState } = Context.useObservedState(name);
+  const [ state, setState ]= Context.useObservedState(name);
   return (
     <input
       type="text"
@@ -55,19 +50,16 @@ render(<App />, document.getElementById("root"));
 
 ```javascript
 /**
- * useHook 自定义hook
- * stateKey 数据所在的key
+ * baseState 默认值
  */
-function createObservedContext(useHook, stateKey)
+function createObservedContext(baseState)
 ```
 
 **<Context.Provider />**
 
-`initialState`会传递给自定义hook
-
 ```jsx
-<Context.Provider initialState={state}>
-  { ... }
+<Context.Provider>
+  { children... }
 </Context.Provider>
 ```
 
@@ -75,12 +67,10 @@ function createObservedContext(useHook, stateKey)
 
 ```javascript
 /**
- * key 观察的字段，数组或字符串，false为不观察
+ * key 观察的字段，数组或字符串，false为不观察，如自定义第二个setState
  */
 function useObservedState(key)
 ```
-
-
 
 ## 警告
 
