@@ -1,5 +1,9 @@
 # react-observed-context
 
+> 这个功能只在16和17可用，18不可用了。
+> 
+> 具体原理可查看[React中Context的精准更新](https://juejin.cn/post/6936576203612651534)。
+
 利用React隐藏特性来让Context只在当前组件使用字段改变时更新组件。
 
 ## 使用
